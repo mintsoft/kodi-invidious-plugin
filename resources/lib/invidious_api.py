@@ -2,6 +2,8 @@ import time
 from collections import namedtuple
 
 import requests
+import xbmc
+import xbmcaddon
 
 VideoListItem = namedtuple("SearchResult",
     [
@@ -19,6 +21,7 @@ VideoListItem = namedtuple("SearchResult",
 class InvidiousAPIClient:
     def __init__(self, instance_url):
         self.instance_url = instance_url.rstrip("/")
+        self.addon = xbmcaddon.Addon()
 
     def make_get_request(self, *path, **params):
         base_url = self.instance_url + "/api/v1/"
@@ -34,14 +37,13 @@ class InvidiousAPIClient:
         start = time.time()
         response = requests.get(assembled_url, params=params, timeout=5)
         end = time.time()
-        xbmc.log("========== request finished in", end - start, "s ==========", xbmc.LOGDEBUG)
+        xbmc.log("========== request finished in" + str(end - start) + "s ==========", xbmc.LOGDEBUG)
 
         response.raise_for_status()
 
         return response
 
-    @staticmethod
-    def parse_video_list_response(response):
+    def parse_video_list_response(self, response):
         data = response.json()
 
         for video in data:
@@ -55,12 +57,12 @@ class InvidiousAPIClient:
             # as a fallback, we just use the last one in the list (which is usually the lowest quality)
             else:
                 thumbnail_url = video["videoThumbnails"][-1]["url"]
-
+        
             yield VideoListItem(
                 video["videoId"],
                 video["title"],
                 video["author"],
-                video.get("description", "No description available"),
+                video.get("description", self.addon.getLocalizedString(30000)),
                 thumbnail_url,
                 video["viewCount"],
                 video["published"],
